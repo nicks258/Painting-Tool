@@ -1,0 +1,85 @@
+apply plugin: 'com.android.application'
+apply from: 'adb_tasks.gradle'
+
+android {
+    useLibrary 'org.apache.http.legacy'
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
+
+    defaultConfig {
+        applicationId "org.catrobat.paintroid"
+        minSdkVersion 16
+        targetSdkVersion 22
+        testApplicationId "org.catrobat.paintroid.test"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "pl.polidea.instrumentation.PolideaInstrumentationTestRunner"
+        versionCode 18
+        versionName "1.1.15"
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDir 'src/main/java'
+            }
+
+            resources {
+                srcDir 'src/main/res'
+            }
+
+        }
+
+        androidTest {
+            if (file('../testexclusions.txt').exists()) {
+                java.exclude file('../testexclusions.txt').readLines()
+            }
+        }
+    }
+
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:23.0.1'
+    compile 'com.squareup.picasso:picasso:2.5.0'
+    compile 'com.android.support:design:23.4.0'
+    compile 'com.jaredrummler:material-spinner:1.1.0'
+// https://mvnrepository.com/artifact/commons-net/commons-net
+    compile group: 'commons-net', name: 'commons-net', version: '3.3'
+    compile 'com.jakewharton:disklrucache:2.0.2'
+
+    androidTestCompile('junit:junit:4.10') {
+        exclude module: 'hamcrest-core'
+    }
+    androidTestCompile 'com.jayway.android.robotium:robotium-solo:5.6.3'
+    androidTestCompile files('libs/the-missing-android-xml-junit-test-runner-release-1.3_2.jar')
+    androidTestCompile 'com.android.support.test.espresso:espresso-core:2.2.2'
+    androidTestCompile("com.android.support.test.espresso:espresso-contrib:2.2.2") {
+        exclude group: 'com.android.support', module: 'appcompat'
+        exclude group: 'com.android.support', module: 'support-v4'
+        exclude group: 'com.android.support', module: 'support-v7'
+        exclude group: 'com.android.support', module: 'design'
+        exclude module: 'support-annotations'
+        exclude module: 'recyclerview-v7'
+    }
+
+}
+
+
+
+if (project.hasProperty('jenkins')) {
+    project.android.dexOptions.preDexLibraries = false
+} else {
+    //not a jenkins build, remove animation scale permissio
+    android.applicationVariants.all { variant ->
+        println "Removing the SET_ANIMATION_SCALE permission for $variant.name"
+        variant.outputs[0].processManifest.doLast {
+            def generatedContent = manifestOutputFile.getText()
+            generatedContent = generatedContent.replace('<uses-permission android:name="android.permission.SET_ANIMATION_SCALE" />', '')
+            if (generatedContent.contains('SET_ANIMATION_SCALE')) {
+                throw new RuntimeException("Error in removing animation scale permission!")
+            }
+            manifestOutputFile.write(generatedContent)
+        }
+    }
+}
